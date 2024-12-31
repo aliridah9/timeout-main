@@ -1,0 +1,24 @@
+{
+  "name": "challenge",
+  "version": "1.0.2",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev:frontend": "pnpm -C ./frontend dev:frontend",
+    "dev:backend": "pnpm -C ./backend dev:all",
+    "dev:all": "concurrently --kill-others-on-fail -n \"frontend,backend\"  \"pnpm dev:frontend\" \"pnpm dev:backend\"",
+    "dev:setup": "pnpm -C ./backend db:setup",
+    "lint": "pnpm -C ./frontend lint && pnpm -C ./backend lint",
+    "test": "pnpm -C ./e2e-tests test",
+    "format": "pnpm -C ./frontend format && pnpm -C ./backend format"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "concurrently": "^8.0.1"
+  },
+  "volta": {
+    "node": "18.20.3"
+  }
+}

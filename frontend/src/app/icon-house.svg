@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="16px" height="13px" viewBox="0 0 16 13" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>icon_house</title>
+    <g id="Timesheet" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Timesheet-" transform="translate(-856, -251.0297)" fill="#3CA2B9" fill-rule="nonzero">
+            <g id="icon_house" transform="translate(856, 251.0297)">
+                <polygon id="Path" points="7.744 3.3570845 2.4167935 7.45623175 2.4167935 12.948089 6.69738025 12.948089 6.69738025 8.92347775 8.971424 8.92347775 8.971424 12.948089 13.0712368 12.948089 13.0712368 7.45623175"></polygon>
+                <polygon id="Path" points="13.2943305 4.2697875 13.2943305 1.46183125 11.050809 1.46183125 11.050809 2.54387375 7.744 -7.50510765e-14 -3.14415161e-13 5.95734425 1.06900475 7.34690825 7.744 2.21067 14.4190255 7.3469385 15.488 5.9573745"></polygon>
+            </g>
+        </g>
+    </g>
+</svg>
