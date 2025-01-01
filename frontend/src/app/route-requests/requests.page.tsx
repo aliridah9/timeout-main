@@ -2,6 +2,7 @@ import { trpc } from "../../utils/trpc";
 import { format } from "date-fns";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "../../../../backend/src/router";
+import React, { useState } from "react";
 import SearchIcon from "../icon-search.svg";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/table";
 import RefreshIcon from "~/app/icon-refresh.svg";
@@ -11,8 +12,23 @@ import HouseIcon from "~/app/icon-house.svg";
 
 export default function RequestsPage() {
   const requestsQuery = trpc.leaveRequests.getLeaveRequests.useQuery();
-
   const { data } = requestsQuery;
+
+  // State for the search input
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Filter the data based on the search term
+  const filteredData = data?.filter((leaveRequest) => {
+    const fullName = `${leaveRequest.employee.firstName} ${leaveRequest.employee.lastName}`.toLowerCase();
+    const type = leaveRequest.leavePolicy.title.toLowerCase();
+    const status = leaveRequest.status.toLowerCase();
+    const search = searchTerm.toLowerCase();
+
+    // Match name, type, or status
+    return (
+      fullName.includes(search) || type === search || status === search
+    );
+  });
 
   return (
     <div className="flex h-full flex-col">
@@ -29,6 +45,8 @@ export default function RequestsPage() {
             className="w-full rounded-3xl outline-none"
             placeholder="Search for a request"
             data-testid="search-requests-input"
+            value={searchTerm} // Controlled input
+            onChange={(e) => setSearchTerm(e.target.value)} // Update search term
           />
         </div>
       </div>
@@ -52,11 +70,11 @@ export default function RequestsPage() {
       </div>
       {requestsQuery.isLoading && <div>Loading...</div>}
       {requestsQuery.error && <div className="text-red">{requestsQuery.error.message}</div>}
-      {data &&
-        (data.length === 0 ? (
+      {filteredData &&
+        (filteredData.length === 0 ? (
           <div data-testid="requests-table-no-requests">No requests found!</div>
         ) : (
-          requestsQuery.isSuccess && <RequestsTable data={data} />
+          requestsQuery.isSuccess && <RequestsTable data={filteredData} />
         ))}
     </div>
   );
@@ -97,40 +115,13 @@ function RequestsTable(props: { data: LeaveRequestsResponse }) {
                       <TableCell>
                         <LeavePolicyCell value={leaveRequest.leavePolicy.title} />
                       </TableCell>
-                      <TableCell>{format(leaveRequest.startDate, "dd/MM/Y")}</TableCell>
-                      <TableCell>{format(leaveRequest.endDate, "dd/MM/Y")}</TableCell>
+                      <TableCell>{format(new Date(leaveRequest.startDate), "dd/MM/Y")}</TableCell>
+                      <TableCell>{format(new Date(leaveRequest.endDate), "dd/MM/Y")}</TableCell>
                       <TableCell>
                         <div className="flex items-center">
                           <div data-testid="leave-request-status">{`${leaveRequest.status[0].toUpperCase()}${leaveRequest.status.slice(
                             1
                           )}`}</div>
-
-                          {/*<div className="ml-4">
-                              <button
-                                type="button"
-                                className="flex h-9 items-center rounded-md border border-green px-8
-              text-sm text-green outline-none transition-colors duration-300
-                hover:bg-green hover:text-white
-                focus:ring-2 focus:ring-green
-                active:opacity-60 active:transition-none"
-                                data-testid="leave-request-button-approve"
-                              >
-                                Approve
-                              </button>
-                            </div>
-                            <div className="ml-2">
-                              <button
-                                type="button"
-                                className="flex h-9 items-center rounded-md border border-red px-8
-                text-sm text-red outline-none transition-colors duration-300
-                  hover:bg-red hover:text-white
-                  focus:ring-2 focus:ring-red
-                  active:opacity-60 active:transition-none"
-                                data-testid="leave-request-button-reject"
-                              >
-                                Reject
-                              </button>
-                            </div>*/}
                         </div>
                       </TableCell>
                     </TableRow>

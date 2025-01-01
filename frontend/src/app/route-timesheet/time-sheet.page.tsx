@@ -25,6 +25,19 @@ export default function TimeSheetPage() {
   });
   const data = timesheetQuery.data;
 
+  // State for search term
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Filtered data based on search term
+  const filteredData = useMemo(() => {
+    if (!data) return [];
+    const search = searchTerm.toLowerCase();
+    return data.filter((record) => {
+      const fullName = `${record.employee.firstName} ${record.employee.lastName}`.toLowerCase();
+      return fullName.includes(search); // Substring match for the employee's full name
+    });
+  }, [data, searchTerm]);
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-20 items-center justify-start px-6">
@@ -40,6 +53,8 @@ export default function TimeSheetPage() {
             className="w-full rounded-3xl outline-none"
             placeholder="Search for an employee"
             data-testid="search-timesheet-input"
+            value={searchTerm} // Controlled input
+            onChange={(e) => setSearchTerm(e.target.value)} // Update search term
           />
         </div>
       </div>
@@ -95,11 +110,11 @@ export default function TimeSheetPage() {
       </div>
       {timesheetQuery.isLoading && <div>Loading...</div>}
       {timesheetQuery.error && <div className="text-red">{timesheetQuery.error.message}</div>}
-      {data &&
-        (data.length === 0 ? (
+      {filteredData &&
+        (filteredData.length === 0 ? (
           <div data-testid="timesheet-table-no-employees">No employees found!</div>
         ) : (
-          timesheetQuery.isSuccess && <TimeSheetTable startDate={startDate} data={data} />
+          timesheetQuery.isSuccess && <TimeSheetTable startDate={startDate} data={filteredData} />
         ))}
     </div>
   );
