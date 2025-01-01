@@ -6,7 +6,7 @@ import {
   leavePolicies as leavePoliciesTable,
   leaveRequests as leaveRequestsTable,
 } from "../../db/schema";
-import { eq } from "drizzle-orm";
+import { eq , or} from "drizzle-orm";
 import { getCurrentEmployeeId } from "../utils/auth";
 import { startOfDay } from "date-fns";
 
@@ -61,4 +61,17 @@ export default router({
         })
         .returning();
     }),
+    getDashboardLeaveRequests: publicProcedure.query(async () => {
+      return await db.query.leaveRequests.findMany({
+        with: {
+          employee: true,
+          leavePolicy: true,
+        },
+        where: or(
+          eq(leaveRequestsTable.status, "pending"),
+          eq(leaveRequestsTable.status, "approved")
+        ),
+      });
+    }),
+    
 });

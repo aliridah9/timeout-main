@@ -1,7 +1,7 @@
 import { router, publicProcedure } from "../trpc";
 import { z } from "zod";
 import { leaveRequests as leaveRequestsTable } from "../../db/schema";
-import { and, gte, lte } from "drizzle-orm";
+import { and, gte, lte , eq } from "drizzle-orm";
 import { getYear } from "date-fns";
 import { db } from "../../db";
 import { getCurrentEmployeeId } from "../utils/auth";
@@ -13,34 +13,38 @@ export default router({
     return getEntitlements(getCurrentEmployeeId(), currentYear);
   }),
   getTimeSheet: publicProcedure
-    .input(
-      z.object({
-        startDate: z.date(),
-        endDate: z.date(),
-      })
-    )
-    .query(async (obj) => {
-      let {
-        input: { startDate, endDate },
-      } = obj;
+  .input(
+    z.object({
+      startDate: z.date(),
+      endDate: z.date(),
+    })
+  )
+  .query(async (obj) => {
+    let {
+      input: { startDate, endDate },
+    } = obj;
 
-      let employees = await db.query.employees.findMany({
-        with: {
-          leaveRequests: {
-            where: and(lte(leaveRequestsTable.startDate, endDate), gte(leaveRequestsTable.endDate, startDate)),
-            with: {
-              leavePolicy: true,
-            },
+    let employees = await db.query.employees.findMany({
+      with: {
+        leaveRequests: {
+          where: and(
+            lte(leaveRequestsTable.startDate, endDate),
+            gte(leaveRequestsTable.endDate, startDate),
+            eq(leaveRequestsTable.status, "approved") // Only include approved leaves
+          ),
+          with: {
+            leavePolicy: true,
           },
         },
-      });
+      },
+    });
 
-      return employees.map((item) => {
-        const { leaveRequests, ...employee } = item;
-        return {
-          employee,
-          dates: getDateDetails({ leaveRequests, startDate, endDate }),
-        };
-      });
-    }),
+    return employees.map((item) => {
+      const { leaveRequests, ...employee } = item;
+      return {
+        employee,
+        dates: getDateDetails({ leaveRequests, startDate, endDate }),
+      };
+    });
+  }),
 });

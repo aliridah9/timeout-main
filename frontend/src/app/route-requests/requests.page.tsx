@@ -12,22 +12,19 @@ import HouseIcon from "~/app/icon-house.svg";
 
 export default function RequestsPage() {
   const requestsQuery = trpc.leaveRequests.getLeaveRequests.useQuery();
-  const { data } = requestsQuery;
 
   // State for the search input
   const [searchTerm, setSearchTerm] = useState("");
 
   // Filter the data based on the search term
-  const filteredData = data?.filter((leaveRequest) => {
+  const filteredData = requestsQuery.data?.filter((leaveRequest) => {
     const fullName = `${leaveRequest.employee.firstName} ${leaveRequest.employee.lastName}`.toLowerCase();
     const type = leaveRequest.leavePolicy.title.toLowerCase();
     const status = leaveRequest.status.toLowerCase();
     const search = searchTerm.toLowerCase();
 
     // Match name, type, or status
-    return (
-      fullName.includes(search) || type === search || status === search
-    );
+    return fullName.includes(search) || type === search || status === search;
   });
 
   return (
@@ -102,31 +99,29 @@ function RequestsTable(props: { data: LeaveRequestsResponse }) {
             </TableHeader>
             <TableBody>
               {data.length > 0 ? (
-                data.map((leaveRequest) => {
-                  return (
-                    <TableRow
-                      key={leaveRequest.id}
-                      className="bg-white"
-                      data-testid={"requests-table-row-" + leaveRequest.id}
-                    >
-                      <TableCell className="font-bold" data-testid={"requests-row-name-" + leaveRequest.id}>
-                        {leaveRequest.employee.firstName} {leaveRequest.employee.lastName}
-                      </TableCell>
-                      <TableCell>
-                        <LeavePolicyCell value={leaveRequest.leavePolicy.title} />
-                      </TableCell>
-                      <TableCell>{format(new Date(leaveRequest.startDate), "dd/MM/Y")}</TableCell>
-                      <TableCell>{format(new Date(leaveRequest.endDate), "dd/MM/Y")}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          <div data-testid="leave-request-status">{`${leaveRequest.status[0].toUpperCase()}${leaveRequest.status.slice(
-                            1
-                          )}`}</div>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
+                data.map((leaveRequest) => (
+                  <TableRow
+                    key={leaveRequest.id}
+                    className="bg-white"
+                    data-testid={"requests-table-row-" + leaveRequest.id}
+                  >
+                    <TableCell className="font-bold" data-testid={"requests-row-name-" + leaveRequest.id}>
+                      {leaveRequest.employee.firstName} {leaveRequest.employee.lastName}
+                    </TableCell>
+                    <TableCell>
+                      <LeavePolicyCell value={leaveRequest.leavePolicy.title} />
+                    </TableCell>
+                    <TableCell>{format(new Date(leaveRequest.startDate), "dd/MM/yyyy")}</TableCell>
+                    <TableCell>{format(new Date(leaveRequest.endDate), "dd/MM/yyyy")}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center">
+                        <div data-testid="leave-request-status">{`${leaveRequest.status[0].toUpperCase()}${leaveRequest.status.slice(
+                          1
+                        )}`}</div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
               ) : (
                 <TableRow>
                   <TableCell data-testid="requests-table-no-results" colSpan={6} className="h-24 text-center">

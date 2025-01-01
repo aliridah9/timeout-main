@@ -13,29 +13,63 @@ const ColorClassByLabel: Record<string, string> = {
 };
 
 export function EntitlementBars({ display = "default" }: EntitlementBarsProps) {
-  const employeesQuery = trpc.employees.getCurrentEmployee.useQuery();
-  if (employeesQuery.error) {
-    return <div>error</div>;
+  // Fetch filtered leave requests for the dashboard
+  const leaveRequestsQuery = trpc.leaveRequests.getDashboardLeaveRequests.useQuery();
+
+  if (leaveRequestsQuery.isLoading) {
+    return (
+      <div className={`flex h-full flex-col justify-between ${display === "compact" && "gap-y-4"} py-8`}>
+        {[...Array(3)].map((_, index) => (
+          <div key={index}>
+            <LoadingEntitlementBar display={display} />
+          </div>
+        ))}
+      </div>
+    );
   }
+
+  if (leaveRequestsQuery.error) {
+    return <div className="text-red">Error: {leaveRequestsQuery.error.message}</div>;
+  }
+
+  const leaveRequests = leaveRequestsQuery.data || [];
+
+  // Group leave requests by policy and calculate the total days taken
+  const entitlementMap: Record<
+    string,
+    { taken: number; max: number; isUnlimited: boolean }
+  > = {};
+
+  leaveRequests.forEach((request) => {
+    const { title, allowedDaysPerYear, isUnlimited } = request.leavePolicy;
+
+    const startDate = new Date(request.startDate);
+    const endDate = new Date(request.endDate);
+    const daysTaken = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
+
+    if (!entitlementMap[title]) {
+      entitlementMap[title] = {
+        taken: 0,
+        max: isUnlimited ? Infinity : allowedDaysPerYear ?? 0,
+        isUnlimited: !!isUnlimited,
+      };
+    }
+
+    entitlementMap[title].taken += daysTaken;
+  });
+
   return (
     <div className={`flex h-full flex-col justify-between ${display === "compact" && "gap-y-4"} py-8`}>
-      {!employeesQuery.data
-        ? [...Array(3)].map((_, index) => (
-            <div key={index}>
-              <LoadingEntitlementBar display={display} />
-            </div>
-          ))
-        : employeesQuery.data.entitlement.map((entitlement) => (
-            <div key={entitlement.id}>
-              <EntitlementBar
-                label={entitlement.title}
-                colorClass={ColorClassByLabel[entitlement.title] ?? "bg-gray-400"}
-                taken={entitlement.alreadyTaken}
-                max={entitlement.isUnlimited ? Infinity : entitlement.allowedDaysPerYear ?? 0}
-                display={display}
-              />
-            </div>
-          ))}
+      {Object.entries(entitlementMap).map(([title, { taken, max }]) => (
+        <EntitlementBar
+          key={title}
+          label={title}
+          colorClass={ColorClassByLabel[title] ?? "bg-gray-400"}
+          taken={taken}
+          max={max}
+          display={display}
+        />
+      ))}
     </div>
   );
 }
