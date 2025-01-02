@@ -23,6 +23,9 @@ export default function TimeSheetPage() {
     startDate,
     endDate,
   });
+  const currentUserQuery = trpc.employees.getCurrentEmployee.useQuery();
+
+  const currentUserId = currentUserQuery.data?.details?.id; // Extract currentUserId
   const data = timesheetQuery.data;
 
   // State for search term
@@ -114,7 +117,9 @@ export default function TimeSheetPage() {
         (filteredData.length === 0 ? (
           <div data-testid="timesheet-table-no-employees">No employees found!</div>
         ) : (
-          timesheetQuery.isSuccess && <TimeSheetTable startDate={startDate} data={filteredData} />
+          timesheetQuery.isSuccess && (
+            <TimeSheetTable startDate={startDate} data={filteredData} currentUserId={currentUserId} />
+          )
         ))}
     </div>
   );
@@ -128,9 +133,13 @@ type RouterOutput = inferRouterOutputs<AppRouter>;
 type TimeSheetResponse = RouterOutput["employees"]["getTimeSheet"];
 type EmployeeDate = RouterOutput["employees"]["getTimeSheet"][number]["dates"][number];
 
-function TimeSheetTable(props: { data: TimeSheetResponse; startDate: Date }) {
-  const { data, startDate } = props;
+function TimeSheetTable(props: { data: TimeSheetResponse; startDate: Date; currentUserId: number | undefined }) {
+  const { data, startDate, currentUserId } = props;
   const dates = useMemo(() => getDatesOfWeek(startDate), [startDate]);
+
+  // Log the currentUserId and the incoming data
+  console.log("Debug: Current User ID:", currentUserId);
+  console.log("Debug: Data Rows:", data);
 
   return (
     <div className="min-h-0">
@@ -152,22 +161,38 @@ function TimeSheetTable(props: { data: TimeSheetResponse; startDate: Date }) {
             </TableHeader>
             <TableBody>
               {data.length > 0 ? (
-                data.map((record) => (
-                  <TableRow
-                    key={record.employee.id}
-                    className="bg-white"
-                    data-testid={"timesheet-table-row-" + record.employee.id}
-                  >
-                    <TableCell className="font-bold" data-testid={"timesheet-row-name-" + record.employee.id}>
-                      {record.employee.firstName} {record.employee.lastName}
-                    </TableCell>
-                    {dates.map((date, i) => (
-                      <TableCell key={date.toString()} data-testid={"timesheet-row-cell-" + (i + 1)}>
-                        <TimeSheetCell value={record.dates[i]} />
+                data.map((record) => {
+                  const isCurrentUser = Number(record.employee.id) === currentUserId;
+
+                  // Log information about each row
+                  console.log("Row Employee ID:", record.employee.id);
+                  console.log("Is Current User:", isCurrentUser);
+
+                  return (
+                    <TableRow
+                      key={record.employee.id}
+                      className={`bg-white ${isCurrentUser ? "border-y-4 border-blue" : ""}`}
+                      data-testid={"timesheet-table-row-" + record.employee.id}
+                    >
+                      <TableCell
+                        className={`font-bold ${isCurrentUser ? "bg-blue text-white" : ""}`}
+                        data-testid={"timesheet-row-name-" + record.employee.id}
+                      >
+                        {record.employee.firstName} {record.employee.lastName}
+                        {isCurrentUser && " (You)"}
                       </TableCell>
-                    ))}
-                  </TableRow>
-                ))
+                      {dates.map((date, i) => (
+                        <TableCell
+                          key={date.toString()}
+                          className={isCurrentUser ? "border-blue" : ""}
+                          data-testid={"timesheet-row-cell-" + (i + 1)}
+                        >
+                          <TimeSheetCell value={record.dates[i]} />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  );
+                })
               ) : (
                 <TableRow>
                   <TableCell data-testid="timesheet-table-no-results" colSpan={8} className="h-24 text-center">
