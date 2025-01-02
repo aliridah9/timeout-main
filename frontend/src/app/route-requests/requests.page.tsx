@@ -12,6 +12,7 @@ import HouseIcon from "~/app/icon-house.svg";
 
 export default function RequestsPage() {
   const requestsQuery = trpc.leaveRequests.getLeaveRequests.useQuery();
+  const updateStatusMutation = trpc.leaveRequests.updateStatus.useMutation();
 
   // State for the search input
   const [searchTerm, setSearchTerm] = useState("");
@@ -26,6 +27,17 @@ export default function RequestsPage() {
     // Match name, type, or status
     return fullName.includes(search) || type === search || status === search;
   });
+
+  const handleStatusUpdate = (id: number, status: "approved" | "rejected") => {
+    updateStatusMutation.mutate(
+      { id, status },
+      {
+        onSuccess: () => {
+          requestsQuery.refetch(); // Refresh the data
+        },
+      }
+    );
+  };
 
   return (
     <div className="flex h-full flex-col">
@@ -71,7 +83,7 @@ export default function RequestsPage() {
         (filteredData.length === 0 ? (
           <div data-testid="requests-table-no-requests">No requests found!</div>
         ) : (
-          requestsQuery.isSuccess && <RequestsTable data={filteredData} />
+          requestsQuery.isSuccess && <RequestsTable data={filteredData} onStatusUpdate={handleStatusUpdate} />
         ))}
     </div>
   );
@@ -80,8 +92,11 @@ export default function RequestsPage() {
 type RouterOutput = inferRouterOutputs<AppRouter>;
 type LeaveRequestsResponse = RouterOutput["leaveRequests"]["getLeaveRequests"];
 
-function RequestsTable(props: { data: LeaveRequestsResponse }) {
-  const { data } = props;
+function RequestsTable(props: {
+  data: LeaveRequestsResponse;
+  onStatusUpdate: (id: number, status: "approved" | "rejected") => void;
+}) {
+  const { data, onStatusUpdate } = props;
 
   return (
     <div className="min-h-0">
@@ -118,6 +133,34 @@ function RequestsTable(props: { data: LeaveRequestsResponse }) {
                         <div data-testid="leave-request-status">{`${leaveRequest.status[0].toUpperCase()}${leaveRequest.status.slice(
                           1
                         )}`}</div>
+                        {leaveRequest.status === "pending" && (
+                          <div className="ml-4">
+                            <button
+                              type="button"
+                              className="flex h-9 items-center rounded-md border border-green px-8
+                                text-sm text-green outline-none transition-colors duration-300
+                                hover:bg-green hover:text-white focus:ring-2 focus:ring-green active:opacity-60"
+                              onClick={() => onStatusUpdate(leaveRequest.id, "approved")}
+                              data-testid="leave-request-button-approve"
+                            >
+                              Approve
+                            </button>
+                          </div>
+                        )}
+                        {leaveRequest.status === "pending" && (
+                          <div className="ml-2">
+                            <button
+                              type="button"
+                              className="flex h-9 items-center rounded-md border border-red px-8
+                                text-sm text-red outline-none transition-colors duration-300
+                                hover:bg-red hover:text-white focus:ring-2 focus:ring-red active:opacity-60"
+                              onClick={() => onStatusUpdate(leaveRequest.id, "rejected")}
+                              data-testid="leave-request-button-reject"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

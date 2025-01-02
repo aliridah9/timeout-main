@@ -35,10 +35,7 @@ export function EntitlementBars({ display = "default" }: EntitlementBarsProps) {
   const leaveRequests = leaveRequestsQuery.data || [];
 
   // Group leave requests by policy and calculate the total days taken
-  const entitlementMap: Record<
-    string,
-    { taken: number; max: number; isUnlimited: boolean }
-  > = {};
+  const entitlementMap: Record<string, { taken: number; max: number; isUnlimited: boolean }> = {};
 
   leaveRequests.forEach((request) => {
     const { title, allowedDaysPerYear, isUnlimited } = request.leavePolicy;
