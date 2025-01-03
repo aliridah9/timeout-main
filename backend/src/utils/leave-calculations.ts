@@ -1,7 +1,7 @@
 import { employees as employeesTable, leaveRequests as leaveRequestsTable } from "../../db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { LeavePolicy } from "../../db/schema-types";
-import { eachDayOfInterval, startOfDay, isWithinInterval } from "date-fns";
+import { eachDayOfInterval, startOfDay, isWithinInterval, isWeekend } from "date-fns";
 import { db } from "../../db";
 
 type GetDatesProps = {
@@ -18,16 +18,13 @@ export function getDateDetails({ leaveRequests, startDate, endDate }: GetDatesPr
   const dates = eachDayOfInterval({ start: startDate, end: endDate }).map((date) => startOfDay(date));
 
   return dates.map((date) => {
+    const isWeekendDay = isWeekend(date); // Determine if the date is a weekend
     const leavePriorities: Record<string, number> = {
-      // Sick Leave
-      "2": 1,
-      // Annual leave
-      "1": 2,
-      // Remote work
-      "3": 3,
+      "2": 1, // Sick Leave
+      "1": 2, // Annual Leave
+      "3": 3, // Remote Work
     };
-    // Sort leave requests by priority and take the first one. If two leaves
-    // have an overlapping date we prefer the one with higher priority
+
     const leaveRequest = leaveRequests
       .filter((leaveRequest) => {
         return isWithinInterval(date, {
@@ -47,11 +44,13 @@ export function getDateDetails({ leaveRequests, startDate, endDate }: GetDatesPr
         type: "leave" as const,
         date,
         leavePolicy: leaveRequest.leavePolicy,
+        isWeekend: isWeekendDay, // Add isWeekend property
       };
     }
     return {
       type: "work" as const,
       date,
+      isWeekend: isWeekendDay, // Add isWeekend property
     };
   });
 }

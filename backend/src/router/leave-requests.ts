@@ -8,15 +8,37 @@ import {
 } from "../../db/schema";
 import { eq, or } from "drizzle-orm";
 import { getCurrentEmployeeId } from "../utils/auth";
-import { startOfDay } from "date-fns";
+import { startOfDay, isWeekend } from "date-fns";
+import { getDateDetails } from "../utils/leave-calculations";
 
 export default router({
   getLeaveRequests: publicProcedure.query(async () => {
-    return await db.query.leaveRequests.findMany({
+    const leaveRequests = await db.query.leaveRequests.findMany({
       with: {
         employee: true,
         leavePolicy: true,
       },
+    });
+
+    return leaveRequests.map((request) => {
+      const startDate = new Date(request.startDate);
+      const endDate = new Date(request.endDate);
+      const workingDays = getDateDetails({
+        leaveRequests: [
+          {
+            startDate,
+            endDate,
+            leavePolicy: request.leavePolicy,
+          },
+        ],
+        startDate,
+        endDate,
+      }).filter((detail) => !isWeekend(detail.date)).length;
+
+      return {
+        ...request,
+        countWorkingDays: workingDays,
+      };
     });
   }),
   createLeaveRequest: publicProcedure
@@ -83,12 +105,40 @@ export default router({
     }),
 
   getDashboardLeaveRequests: publicProcedure.query(async () => {
-    return await db.query.leaveRequests.findMany({
+    const leaveRequests = await db.query.leaveRequests.findMany({
       with: {
         employee: true,
         leavePolicy: true,
       },
       where: or(eq(leaveRequestsTable.status, "pending"), eq(leaveRequestsTable.status, "approved")),
+    });
+
+    const startDate = new Date(`${new Date().getFullYear()}-01-01`);
+    const endDate = new Date(`${new Date().getFullYear()}-12-31`);
+
+    const dateDetails = getDateDetails({
+      leaveRequests: leaveRequests.map((request) => ({
+        startDate: new Date(request.startDate),
+        endDate: new Date(request.endDate),
+        leavePolicy: request.leavePolicy,
+      })),
+      startDate,
+      endDate,
+    });
+
+    return leaveRequests.map((request) => {
+      const totalDaysTaken = dateDetails.filter(
+        (detail) =>
+          detail.type === "leave" &&
+          detail.leavePolicy?.id === request.leavePolicy.id &&
+          detail.date >= new Date(request.startDate) &&
+          detail.date <= new Date(request.endDate)
+      ).length;
+
+      return {
+        ...request,
+        totalDaysTaken,
+      };
     });
   }),
 });

@@ -137,10 +137,6 @@ function TimeSheetTable(props: { data: TimeSheetResponse; startDate: Date; curre
   const { data, startDate, currentUserId } = props;
   const dates = useMemo(() => getDatesOfWeek(startDate), [startDate]);
 
-  // Log the currentUserId and the incoming data
-  console.log("Debug: Current User ID:", currentUserId);
-  console.log("Debug: Data Rows:", data);
-
   return (
     <div className="min-h-0">
       <div className="h-full p-6">
@@ -163,10 +159,6 @@ function TimeSheetTable(props: { data: TimeSheetResponse; startDate: Date; curre
               {data.length > 0 ? (
                 data.map((record) => {
                   const isCurrentUser = Number(record.employee.id) === currentUserId;
-
-                  // Log information about each row
-                  console.log("Row Employee ID:", record.employee.id);
-                  console.log("Is Current User:", isCurrentUser);
 
                   return (
                     <TableRow
@@ -210,6 +202,16 @@ function TimeSheetTable(props: { data: TimeSheetResponse; startDate: Date; curre
 
 function TimeSheetCell(props: { value: EmployeeDate }) {
   const { value } = props;
+
+  // Display "Weekend" explicitly
+  if (value.isWeekend) {
+    return (
+      <div className="text-gray-500" data-testid="timesheet-cell-weekend">
+        Weekend
+      </div>
+    );
+  }
+
   const [icon, colorClass, iconClass] =
     value.type === "leave" && value.leavePolicy
       ? {

@@ -107,6 +107,7 @@ function RequestsTable(props: {
               <TableRow className="sticky top-0 bg-white text-blue shadow" data-testid="requests-header-row">
                 <TableHead>EMPLOYEE</TableHead>
                 <TableHead>TYPE</TableHead>
+                <TableHead>WORKING DAYS</TableHead> {/* New Column */}
                 <TableHead>STARTING</TableHead>
                 <TableHead>ENDING</TableHead>
                 <TableHead>STATUS</TableHead>
@@ -125,6 +126,9 @@ function RequestsTable(props: {
                     </TableCell>
                     <TableCell>
                       <LeavePolicyCell value={leaveRequest.leavePolicy.title} />
+                    </TableCell>
+                    <TableCell data-testid={"requests-row-working-days-" + leaveRequest.id}>
+                      {leaveRequest.countWorkingDays} {/* Display Working Days */}
                     </TableCell>
                     <TableCell>{format(new Date(leaveRequest.startDate), "dd/MM/yyyy")}</TableCell>
                     <TableCell>{format(new Date(leaveRequest.endDate), "dd/MM/yyyy")}</TableCell>

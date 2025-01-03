@@ -125,6 +125,7 @@ Similar to the dashboard entitlement widget, the timesheet table should always d
 
 ### Requests Table
 
+
 The "Requests" table has a date range, however it can be difficult to know the number of working days each request entails. Let's add a column called "Working Days" that would display the number of days involved. The number of days should of course exclude weekends.
 
 - The tRPC response should contain the number of working days via an additional field called `countWorkingDays`.
