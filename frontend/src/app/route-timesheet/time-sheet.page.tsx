@@ -23,21 +23,26 @@ export default function TimeSheetPage() {
     startDate,
     endDate,
   });
+
+  const holidaysQuery = trpc.holidays.getHolidaysInRange.useQuery({
+    startDate,
+    endDate,
+  });
+
   const currentUserQuery = trpc.employees.getCurrentEmployee.useQuery();
+  const currentUserId = currentUserQuery.data?.details?.id;
 
-  const currentUserId = currentUserQuery.data?.details?.id; // Extract currentUserId
   const data = timesheetQuery.data;
+  const holidays = holidaysQuery.data || [];
 
-  // State for search term
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Filtered data based on search term
   const filteredData = useMemo(() => {
     if (!data) return [];
     const search = searchTerm.toLowerCase();
     return data.filter((record) => {
       const fullName = `${record.employee.firstName} ${record.employee.lastName}`.toLowerCase();
-      return fullName.includes(search); // Substring match for the employee's full name
+      return fullName.includes(search);
     });
   }, [data, searchTerm]);
 
@@ -56,8 +61,8 @@ export default function TimeSheetPage() {
             className="w-full rounded-3xl outline-none"
             placeholder="Search for an employee"
             data-testid="search-timesheet-input"
-            value={searchTerm} // Controlled input
-            onChange={(e) => setSearchTerm(e.target.value)} // Update search term
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
       </div>
@@ -97,7 +102,9 @@ export default function TimeSheetPage() {
         <button
           onClick={() => {
             timesheetQuery.remove();
+            holidaysQuery.remove();
             timesheetQuery.refetch();
+            holidaysQuery.refetch();
           }}
           type="button"
           aria-label="Refresh"
@@ -117,8 +124,14 @@ export default function TimeSheetPage() {
         (filteredData.length === 0 ? (
           <div data-testid="timesheet-table-no-employees">No employees found!</div>
         ) : (
-          timesheetQuery.isSuccess && (
-            <TimeSheetTable startDate={startDate} data={filteredData} currentUserId={currentUserId} />
+          timesheetQuery.isSuccess &&
+          holidaysQuery.isSuccess && (
+            <TimeSheetTable
+              startDate={startDate}
+              data={filteredData}
+              holidays={holidays}
+              currentUserId={currentUserId}
+            />
           )
         ))}
     </div>
@@ -130,11 +143,16 @@ function getDatesOfWeek(startDate: Date) {
 }
 
 type RouterOutput = inferRouterOutputs<AppRouter>;
-type TimeSheetResponse = RouterOutput["employees"]["getTimeSheet"];
-type EmployeeDate = RouterOutput["employees"]["getTimeSheet"][number]["dates"][number];
+type TimeSheetResponse = Awaited<RouterOutput["employees"]["getTimeSheet"]>;
+type EmployeeDate = TimeSheetResponse[number]["dates"][number];
 
-function TimeSheetTable(props: { data: TimeSheetResponse; startDate: Date; currentUserId: number | undefined }) {
-  const { data, startDate, currentUserId } = props;
+function TimeSheetTable(props: {
+  data: TimeSheetResponse;
+  startDate: Date;
+  holidays: { name: string; date: string }[];
+  currentUserId: number | undefined;
+}) {
+  const { data, startDate, holidays, currentUserId } = props;
   const dates = useMemo(() => getDatesOfWeek(startDate), [startDate]);
 
   return (
@@ -153,6 +171,7 @@ function TimeSheetTable(props: { data: TimeSheetResponse; startDate: Date; curre
                     </div>
                   </TableHead>
                 ))}
+                <TableHead className="text-blue">HOLIDAYS</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -182,6 +201,13 @@ function TimeSheetTable(props: { data: TimeSheetResponse; startDate: Date; curre
                           <TimeSheetCell value={record.dates[i]} />
                         </TableCell>
                       ))}
+                      <TableCell>
+                        {holidays.map((holiday) => (
+                          <div key={holiday.date} className="font-bold text-red-500">
+                            {holiday.name}
+                          </div>
+                        ))}
+                      </TableCell>
                     </TableRow>
                   );
                 })
@@ -203,7 +229,14 @@ function TimeSheetTable(props: { data: TimeSheetResponse; startDate: Date; curre
 function TimeSheetCell(props: { value: EmployeeDate }) {
   const { value } = props;
 
-  // Display "Weekend" explicitly
+  if (value.type === "holiday") {
+    return (
+      <div className="font-bold text-red-500" data-testid="timesheet-cell-holiday">
+        {value.holidayName}
+      </div>
+    );
+  }
+
   if (value.isWeekend) {
     return (
       <div className="text-gray-500" data-testid="timesheet-cell-weekend">

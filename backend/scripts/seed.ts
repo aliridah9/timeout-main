@@ -1,6 +1,7 @@
 import { db } from "../db";
-import { employees, leavePolicies } from "../db/schema";
+import { employees, leavePolicies, holidays } from "../db/schema";
 
+// Seed employees
 db.insert(employees)
   .values([
     {
@@ -14,6 +15,7 @@ db.insert(employees)
   .onConflictDoNothing()
   .run();
 
+// Seed leave policies
 db.insert(leavePolicies)
   .values([
     {
@@ -32,6 +34,20 @@ db.insert(leavePolicies)
       title: "Remote Work",
       isUnlimited: true,
       id: 3,
+    },
+  ])
+  .onConflictDoNothing()
+  .run();
+
+// Insert a holiday
+const nextTenDays = new Date();
+nextTenDays.setDate(nextTenDays.getDate() + 10); // a date 10 days from now
+
+db.insert(holidays)
+  .values([
+    {
+      name: "Thor's Day",
+      date: nextTenDays,
     },
   ])
   .onConflictDoNothing()

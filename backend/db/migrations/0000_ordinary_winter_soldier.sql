@@ -23,3 +23,10 @@ CREATE TABLE `leave_requests` (
 	FOREIGN KEY (`employee_id`) REFERENCES `employees`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`leave_policy_id`) REFERENCES `leave_policies`(`id`) ON UPDATE no action ON DELETE no action
 );
+--> statement-breakpoint
+CREATE TABLE `holidays` (
+  `id` INTEGER PRIMARY KEY NOT NULL,
+  `name` TEXT NOT NULL,
+  `date` TEXT NOT NULL
+);
+

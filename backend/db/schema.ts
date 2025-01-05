@@ -63,3 +63,9 @@ export const leaveRequestsRelations = relations(leaveRequests, ({ one }) => ({
     references: [leavePolicies.id],
   }),
 }));
+
+export const holidays = sqliteTable("holidays", {
+  id: integer("id").primaryKey(),
+  name: text("name").notNull(),
+  date: dateType("date").notNull(),
+});

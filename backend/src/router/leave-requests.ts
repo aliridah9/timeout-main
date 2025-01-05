@@ -20,27 +20,35 @@ export default router({
       },
     });
 
-    return leaveRequests.map((request) => {
-      const startDate = new Date(request.startDate);
-      const endDate = new Date(request.endDate);
-      const workingDays = getDateDetails({
-        leaveRequests: [
-          {
+    const results = await Promise.all(
+      leaveRequests.map(async (request) => {
+        const startDate = new Date(request.startDate);
+        const endDate = new Date(request.endDate);
+
+        const workingDays = (
+          await getDateDetails({
+            leaveRequests: [
+              {
+                startDate,
+                endDate,
+                leavePolicy: request.leavePolicy,
+              },
+            ],
             startDate,
             endDate,
-            leavePolicy: request.leavePolicy,
-          },
-        ],
-        startDate,
-        endDate,
-      }).filter((detail) => !isWeekend(detail.date)).length;
+          })
+        ).filter((detail) => !isWeekend(detail.date)).length;
 
-      return {
-        ...request,
-        countWorkingDays: workingDays,
-      };
-    });
+        return {
+          ...request,
+          countWorkingDays: workingDays,
+        };
+      })
+    );
+
+    return results;
   }),
+
   createLeaveRequest: publicProcedure
     .input(
       z.object({
@@ -83,6 +91,7 @@ export default router({
         })
         .returning();
     }),
+
   updateStatus: publicProcedure
     .input(
       z.object({
@@ -116,7 +125,7 @@ export default router({
     const startDate = new Date(`${new Date().getFullYear()}-01-01`);
     const endDate = new Date(`${new Date().getFullYear()}-12-31`);
 
-    const dateDetails = getDateDetails({
+    const dateDetails = await getDateDetails({
       leaveRequests: leaveRequests.map((request) => ({
         startDate: new Date(request.startDate),
         endDate: new Date(request.endDate),
@@ -126,7 +135,7 @@ export default router({
       endDate,
     });
 
-    return leaveRequests.map((request) => {
+    const results = leaveRequests.map((request) => {
       const totalDaysTaken = dateDetails.filter(
         (detail) =>
           detail.type === "leave" &&
@@ -140,5 +149,7 @@ export default router({
         totalDaysTaken,
       };
     });
+
+    return results;
   }),
 });

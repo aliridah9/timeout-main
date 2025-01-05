@@ -19,32 +19,42 @@ export default router({
         endDate: z.date(),
       })
     )
-    .query(async (obj) => {
-      let {
-        input: { startDate, endDate },
-      } = obj;
-
-      let employees = await db.query.employees.findMany({
+    .query(async ({ input: { startDate, endDate } }) => {
+      // Fetch all employees along with their leave requests
+      const employees = await db.query.employees.findMany({
         with: {
           leaveRequests: {
             where: and(
               lte(leaveRequestsTable.startDate, endDate),
               gte(leaveRequestsTable.endDate, startDate),
-              eq(leaveRequestsTable.status, "approved") // Only include approved leaves
+              eq(leaveRequestsTable.status, "approved") // Only approved leaves
             ),
             with: {
-              leavePolicy: true,
+              leavePolicy: true, // Include leave policy details
             },
           },
         },
       });
 
-      return employees.map((item) => {
-        const { leaveRequests, ...employee } = item;
-        return {
-          employee,
-          dates: getDateDetails({ leaveRequests, startDate, endDate }),
-        };
-      });
+      // Process timesheet data for all employees
+      const result = await Promise.all(
+        employees.map(async (employee) => {
+          const { leaveRequests, ...rest } = employee;
+
+          // Calculate detailed dates using getDateDetails
+          const dates = await getDateDetails({
+            leaveRequests,
+            startDate,
+            endDate,
+          });
+
+          return {
+            employee: rest, // Return employee details
+            dates, // Return processed dates
+          };
+        })
+      );
+
+      return result; // Return the final processed timesheet data for all employees
     }),
 });
