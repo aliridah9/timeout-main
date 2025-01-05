@@ -5,11 +5,12 @@ import {
   employees as employeesTable,
   leavePolicies as leavePoliciesTable,
   leaveRequests as leaveRequestsTable,
+  holidays as holidaysTable,
 } from "../../db/schema";
-import { eq, or } from "drizzle-orm";
+import { and, eq, gte, lte, or } from "drizzle-orm";
 import { getCurrentEmployeeId } from "../utils/auth";
-import { startOfDay, isWeekend } from "date-fns";
-import { getDateDetails } from "../utils/leave-calculations";
+import { startOfDay, isWeekend, getYear } from "date-fns";
+import { getDateDetails, getEntitlements } from "../utils/leave-calculations";
 
 export default router({
   getLeaveRequests: publicProcedure.query(async () => {
@@ -80,6 +81,62 @@ export default router({
       const startDate = startOfDay(new Date(input.startDate));
       const endDate = startOfDay(new Date(input.endDate));
 
+      // Validation 1: End date must not be earlier than start date
+      if (endDate < startDate) {
+        throw new Error("End date should be greater or equal to the start date");
+      }
+
+      // Fetch all holidays for the period
+      const holidays = await db.query.holidays.findMany({
+        where: and(gte(holidaysTable.date, startDate), lte(holidaysTable.date, endDate)),
+      });
+
+      const workingDays = (
+        await getDateDetails({
+          startDate,
+          endDate,
+          holidays,
+          leaveRequests: [], // Provide an empty array for leaveRequests
+        })
+      ).filter((dateDetail) => !dateDetail.isWeekend && dateDetail.type !== "holiday");
+
+      const leaveRequestDays = workingDays.length;
+
+      // Validation 2: Ensure the employee has enough leave days
+      const entitlements = await getEntitlements(employee.id, getYear(startDate));
+      const leaveEntitlement = entitlements.entitlement.find((e) => e.id === leavePolicy.id);
+
+      if (
+        !leaveEntitlement ||
+        leaveEntitlement.allowedDaysPerYear === null ||
+        leaveEntitlement.allowedDaysPerYear < leaveRequestDays
+      ) {
+        throw new Error("Leave request exceeds the allowed days");
+      }
+
+      // Validation 3: Handle multi-year requests
+      const leaveDaysByYear: Record<number, number> = {};
+      workingDays.forEach((day) => {
+        const year = getYear(day.date);
+        if (!leaveDaysByYear[year]) {
+          leaveDaysByYear[year] = 0;
+        }
+        leaveDaysByYear[year]++;
+      });
+
+      for (const year in leaveDaysByYear) {
+        const yearDays = leaveDaysByYear[year];
+        const entitlementForYear = entitlements.entitlement.find((e) => e.id === leavePolicy.id);
+        if (
+          !entitlementForYear ||
+          entitlementForYear.allowedDaysPerYear === null ||
+          entitlementForYear.allowedDaysPerYear < yearDays
+        ) {
+          throw new Error(`Leave request for ${year} exceeds the allowed days`);
+        }
+      }
+
+      // Create the leave request
       return await db
         .insert(leaveRequestsTable)
         .values({

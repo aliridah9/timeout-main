@@ -1,4 +1,8 @@
-import { employees as employeesTable, leaveRequests as leaveRequestsTable, holidays } from "../../db/schema";
+import {
+  employees as employeesTable,
+  leaveRequests as leaveRequestsTable,
+  holidays as holidaysTable,
+} from "../../db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { LeavePolicy } from "../../db/schema-types";
 import { eachDayOfInterval, startOfDay, isWeekend, isSameDay } from "date-fns";
@@ -12,39 +16,49 @@ type GetDatesProps = {
   }[];
   startDate: Date;
   endDate: Date;
+  holidays?: {
+    date: Date;
+    name: string;
+  }[]; // Optional array of holidays
 };
 
-export async function getDateDetails({ leaveRequests, startDate, endDate }: GetDatesProps) {
-  // Fetch all holidays within the date range
-  const holidayRecords = await db.query.holidays.findMany({
-    where: and(gte(holidays.date, startOfDay(startDate)), lte(holidays.date, startOfDay(endDate))),
-  });
+export async function getDateDetails({ leaveRequests, startDate, endDate, holidays = [] }: GetDatesProps) {
+  // Fetch all holidays within the date range if not provided
+  const holidayRecords =
+    holidays.length > 0
+      ? holidays
+      : await db.query.holidays.findMany({
+          where: and(gte(holidaysTable.date, startOfDay(startDate)), lte(holidaysTable.date, startOfDay(endDate))),
+        });
 
   const holidayDates = holidayRecords.map((holiday) => holiday.date);
 
+  // Generate an array of all dates within the given range
   const dates = eachDayOfInterval({ start: startDate, end: endDate }).map((date) => startOfDay(date));
 
   return dates.map((date) => {
     const isWeekendDay = isWeekend(date); // Determine if the date is a weekend
     const isHoliday = holidayDates.some((holidayDate) => isSameDay(holidayDate, date)); // Check if it's a holiday
 
+    // Leave priorities for sorting leave requests
     const leavePriorities: Record<string, number> = {
       "2": 1, // Sick Leave
       "1": 2, // Annual Leave
       "3": 3, // Remote Work
     };
 
+    // Find the relevant leave request for the given date
     const leaveRequest = leaveRequests
       .filter((leaveRequest) => {
         return date >= leaveRequest.startDate && date <= leaveRequest.endDate;
       })
       .sort((a, b) => {
-        if ((leavePriorities[`${a.leavePolicy.id}`] ?? 0) - (leavePriorities[`${b.leavePolicy.id}`] ?? 0) > 0) {
-          return 1;
-        }
-        return -1;
+        const priorityA = leavePriorities[`${a.leavePolicy.id}`] ?? 0;
+        const priorityB = leavePriorities[`${b.leavePolicy.id}`] ?? 0;
+        return priorityA - priorityB;
       })[0];
 
+    // If it's a holiday, return a holiday object
     if (isHoliday) {
       return {
         type: "holiday" as const,
@@ -53,6 +67,7 @@ export async function getDateDetails({ leaveRequests, startDate, endDate }: GetD
       };
     }
 
+    // If there's a leave request, return a leave object
     if (leaveRequest) {
       return {
         type: "leave" as const,
@@ -62,6 +77,7 @@ export async function getDateDetails({ leaveRequests, startDate, endDate }: GetD
       };
     }
 
+    // Default to work days
     return {
       type: "work" as const,
       date,
