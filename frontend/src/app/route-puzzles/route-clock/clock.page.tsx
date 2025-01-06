@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { ClockCard } from "~/app/route-puzzles/route-clock/clock-card";
 import { useCountRendered } from "~/app/route-puzzles/route-clock/use-count-rendered";
 
@@ -16,7 +17,7 @@ export default function ClockPage() {
 }
 
 function DetailedClock() {
-  const { hours, minutes, seconds } = useCurrentTime();
+  const { hours, minutes, seconds } = useCurrentTime("second");
   const countRendered = useCountRendered();
   return (
     <ClockCard title={`Number of renders: ${countRendered}`}>
@@ -26,7 +27,7 @@ function DetailedClock() {
 }
 
 function RegularClock() {
-  const { hours, minutes } = useCurrentTime();
+  const { hours, minutes } = useCurrentTime("minute");
   const countRendered = useCountRendered();
   return (
     <ClockCard title={`Number of renders: ${countRendered}`}>
@@ -107,12 +108,31 @@ function Clock({ hours, minutes, seconds }: { hours: number; minutes: number; se
   );
 }
 
-function useCurrentTime() {
-  // CHANGE CODE HERE AND ONLY HERE ==================
-  return {
-    hours: new Date().getHours(),
-    minutes: new Date().getMinutes(),
-    seconds: new Date().getSeconds(),
-  };
-  // =================================================
+function useCurrentTime(updateInterval: "second" | "minute") {
+  const [time, setTime] = useState(() => {
+    const now = new Date();
+    return {
+      hours: now.getHours(),
+      minutes: now.getMinutes(),
+      seconds: updateInterval === "second" ? now.getSeconds() : undefined,
+    };
+  });
+
+  useEffect(() => {
+    const interval = setInterval(
+      () => {
+        const now = new Date();
+        setTime({
+          hours: now.getHours(),
+          minutes: now.getMinutes(),
+          seconds: updateInterval === "second" ? now.getSeconds() : undefined,
+        });
+      },
+      updateInterval === "second" ? 1000 : 60000
+    ); // Update every second or minute
+
+    return () => clearInterval(interval); // Cleanup interval on unmount
+  }, [updateInterval]);
+
+  return time;
 }
