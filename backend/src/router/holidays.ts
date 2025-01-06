@@ -13,7 +13,6 @@ export default router({
       })
     )
     .query(async ({ input: { startDate, endDate } }) => {
-      // Query the holidays within the date range
       const holidays = await db.query.holidays.findMany({
         where: and(gte(holidaysTable.date, startDate), lte(holidaysTable.date, endDate)),
       });
@@ -21,7 +20,7 @@ export default router({
       return holidays.map((holiday) => ({
         id: holiday.id,
         name: holiday.name,
-        date: holiday.date.toISOString().split("T")[0], // Format the date as YYYY-MM-DD
+        date: holiday.date.toISOString().split("T")[0],
       }));
     }),
 });

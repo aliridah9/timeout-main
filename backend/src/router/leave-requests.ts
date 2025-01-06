@@ -81,12 +81,10 @@ export default router({
       const startDate = startOfDay(new Date(input.startDate));
       const endDate = startOfDay(new Date(input.endDate));
 
-      // Validation 1: End date must not be earlier than start date
       if (endDate < startDate) {
         throw new Error("End date should be greater or equal to the start date");
       }
 
-      // Fetch all holidays for the period
       const holidays = await db.query.holidays.findMany({
         where: and(gte(holidaysTable.date, startDate), lte(holidaysTable.date, endDate)),
       });
@@ -96,13 +94,12 @@ export default router({
           startDate,
           endDate,
           holidays,
-          leaveRequests: [], // Provide an empty array for leaveRequests
+          leaveRequests: [],
         })
       ).filter((dateDetail) => !dateDetail.isWeekend && dateDetail.type !== "holiday");
 
       const leaveRequestDays = workingDays.length;
 
-      // Validation 2: Ensure the employee has enough leave days
       const entitlements = await getEntitlements(employee.id, getYear(startDate));
       const leaveEntitlement = entitlements.entitlement.find((e) => e.id === leavePolicy.id);
 
@@ -114,7 +111,6 @@ export default router({
         throw new Error("Leave request exceeds the allowed days");
       }
 
-      // Validation 3: Handle multi-year requests
       const leaveDaysByYear: Record<number, number> = {};
       workingDays.forEach((day) => {
         const year = getYear(day.date);
@@ -136,7 +132,6 @@ export default router({
         }
       }
 
-      // Create the leave request
       return await db
         .insert(leaveRequestsTable)
         .values({

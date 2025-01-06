@@ -14,17 +14,14 @@ export default function RequestsPage() {
   const requestsQuery = trpc.leaveRequests.getLeaveRequests.useQuery();
   const updateStatusMutation = trpc.leaveRequests.updateStatus.useMutation();
 
-  // State for the search input
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Filter the data based on the search term
   const filteredData = requestsQuery.data?.filter((leaveRequest) => {
     const fullName = `${leaveRequest.employee.firstName} ${leaveRequest.employee.lastName}`.toLowerCase();
     const type = leaveRequest.leavePolicy.title.toLowerCase();
     const status = leaveRequest.status.toLowerCase();
     const search = searchTerm.toLowerCase();
 
-    // Match name, type, or status
     return fullName.includes(search) || type === search || status === search;
   });
 
@@ -33,7 +30,7 @@ export default function RequestsPage() {
       { id, status },
       {
         onSuccess: () => {
-          requestsQuery.refetch(); // Refresh the data
+          requestsQuery.refetch();
         },
       }
     );
@@ -54,8 +51,8 @@ export default function RequestsPage() {
             className="w-full rounded-3xl outline-none"
             placeholder="Search for a request"
             data-testid="search-requests-input"
-            value={searchTerm} // Controlled input
-            onChange={(e) => setSearchTerm(e.target.value)} // Update search term
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
       </div>

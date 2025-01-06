@@ -72,9 +72,22 @@ king harald sup`;
 }
 
 function speak(fn) {
-  // WRITE CODE HERE AND ONLY HERE ===================
-  log("You need to log the correct things here.");
-  // ==================================================
+  const dynamicArgs = new Proxy(
+    {},
+    {
+      get(_, property) {
+        return (nextArg) => {
+          if (typeof nextArg === "function") {
+            return nextArg(property); // Handle chaining of functions
+          }
+          log(`${property} ${nextArg}`); // Log the final string
+        };
+      },
+    }
+  );
+
+  // Call the provided function with the proxy arguments
+  fn(dynamicArgs, dynamicArgs, dynamicArgs, dynamicArgs, dynamicArgs);
 }
 
 export { speak, getLogs };
